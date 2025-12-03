@@ -1,0 +1,73 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: rideshare-microservices
+  namespace: argocd
+spec:
+  # Use matrix generator to combine services with environments
+  generators:
+    - matrix:
+        generators:
+          # List of microservices
+          - list:
+              elements:
+                - service: rideshare-rider-service
+                - service: rideshare-driver-service
+                - service: rideshare-email-service
+                # Add more services here as needed
+                # - service: rideshare-payment-service
+                # - service: rideshare-notification-service
+
+          # List of environments
+          - list:
+              elements:
+                - env: dev
+                  cluster: in-cluster
+                  autoSync: true
+                - env: staging
+                  cluster: in-cluster
+                  autoSync: true
+                - env: prod
+                  cluster: in-cluster
+                  autoSync: false  # Manual sync for production
+
+  template:
+    metadata:
+      name: '{{service}}-{{env}}'
+      labels:
+        service: '{{service}}'
+        environment: '{{env}}'
+    spec:
+      project: default
+
+      source:
+        repoURL: https://github.com/YOUR_ORG/kubernetes-infra.git  # Update with your repo URL
+        targetRevision: main
+        path: helm/rideshare-microservice
+        helm:
+          valueFiles:
+            # Order matters: base values, then service-specific, then environment common, then service+env specific
+            - ../../values/{{service}}.yaml
+            - ../../values/{{env}}/common.yaml
+            # Optional: service-specific overrides per environment
+            # - ../../values/{{env}}/{{service}}.yaml
+
+      destination:
+        server: '{{cluster}}'
+        namespace: rideshare-{{env}}
+
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: '{{autoSync}}'
+          allowEmpty: false
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+          - PruneLast=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

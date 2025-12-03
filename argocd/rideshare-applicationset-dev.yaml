@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: rideshare-microservices-dev
+  namespace: argocd
+spec:
+  # Deploy all microservices to DEV environment only
+  generators:
+    - list:
+        elements:
+          - service: rideshare-rider-service
+          - service: rideshare-driver-service
+          - service: rideshare-email-service
+          # Add more services here as needed
+          # - service: rideshare-payment-service
+          # - service: rideshare-notification-service
+
+  template:
+    metadata:
+      name: '{{service}}-dev'
+      labels:
+        service: '{{service}}'
+        environment: dev
+    spec:
+      project: default
+
+      source:
+        repoURL: https://github.com/YOUR_ORG/kubernetes-infra.git  # Update with your repo URL
+        targetRevision: main
+        path: helm/rideshare-microservice
+        helm:
+          valueFiles:
+            - ../../values/{{service}}.yaml
+            - ../../values/dev/common.yaml
+
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: rideshare-dev
+
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: false
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+          - PruneLast=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

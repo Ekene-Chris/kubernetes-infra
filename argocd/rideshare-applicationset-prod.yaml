@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: rideshare-microservices-prod
+  namespace: argocd
+spec:
+  # Deploy all microservices to PRODUCTION environment only
+  # Note: Auto-sync is disabled for production safety
+  generators:
+    - list:
+        elements:
+          - service: rideshare-rider-service
+          - service: rideshare-driver-service
+          - service: rideshare-email-service
+          # Add more services here as needed
+          # - service: rideshare-payment-service
+          # - service: rideshare-notification-service
+
+  template:
+    metadata:
+      name: '{{service}}-prod'
+      labels:
+        service: '{{service}}'
+        environment: prod
+    spec:
+      project: default
+
+      source:
+        repoURL: https://github.com/YOUR_ORG/kubernetes-infra.git  # Update with your repo URL
+        targetRevision: main
+        path: helm/rideshare-microservice
+        helm:
+          valueFiles:
+            - ../../values/{{service}}.yaml
+            - ../../values/prod/common.yaml
+
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: rideshare-prod
+
+      syncPolicy:
+        # Production uses manual sync for safety
+        automated:
+          prune: true
+          selfHeal: false  # Disabled for production
+          allowEmpty: false
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+          - PruneLast=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

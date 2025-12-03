@@ -1,0 +1,46 @@
+# Service-specific values for rideshare-rider-service
+name: rideshare-rider-service
+namespace: rideshare
+
+image:
+  repository: rideshare-rider-service
+  tag: "latest"
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+replicaCount: 2
+
+# Configuration specific to rider service
+config:
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  SERVICE_NAME: "rideshare-rider-service"
+  # Inter-service communication
+  DRIVER_SERVICE_URL: "http://rideshare-driver-service.rideshare.svc.cluster.local"
+  EMAIL_SERVICE_URL: "http://rideshare-email-service.rideshare.svc.cluster.local"
+
+# Secrets - these will be overridden by environment-specific values
+secrets:
+  DATABASE_URL: ""
+  REDIS_URL: ""
+
+# Ingress - can be enabled per environment
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: rider-api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: rider-api-tls
+      hosts:
+        - rider-api.example.com

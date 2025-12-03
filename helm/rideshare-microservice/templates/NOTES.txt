@@ -1,0 +1,18 @@
+Successfully deployed {{ .Values.name }} to {{ .Values.namespace }} namespace!
+
+Application: {{ include "rideshare-microservice.fullname" . }}
+Replicas: {{ .Values.replicaCount }}
+Image: {{ include "rideshare-microservice.image" . }}
+
+To access your service:
+  kubectl get svc {{ include "rideshare-microservice.fullname" . }} -n {{ .Values.namespace }}
+
+{{- if .Values.ingress.enabled }}
+Ingress hosts:
+{{- range .Values.ingress.hosts }}
+  - {{ .host }}
+{{- end }}
+{{- end }}
+
+To check the status:
+  kubectl get pods -n {{ .Values.namespace }} -l app.kubernetes.io/name={{ include "rideshare-microservice.name" . }}

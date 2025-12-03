@@ -1,0 +1,45 @@
+# Common values for all services in staging environment
+namespace: rideshare-staging
+
+image:
+  tag: "staging-latest"
+  pullPolicy: Always
+
+replicaCount: 2
+
+# Staging resource limits (moderate)
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# Staging configuration
+config:
+  NODE_ENV: "staging"
+  LOG_LEVEL: "info"
+
+# Secrets - Use Azure Key Vault, External Secrets Operator, or Sealed Secrets
+# These are placeholders - replace with actual secret management
+secrets:
+  DATABASE_URL: "postgresql://staging-user:REPLACE_WITH_SECRET@postgres.rideshare-staging.svc.cluster.local:5432/rideshare_staging"
+  REDIS_URL: "redis://redis.rideshare-staging.svc.cluster.local:6379"
+
+# Ingress settings for staging
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  # Update hosts based on your staging domain
+  tls: []
+
+# Enable autoscaling in staging
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 75

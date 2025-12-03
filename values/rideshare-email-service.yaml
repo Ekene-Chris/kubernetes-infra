@@ -1,0 +1,40 @@
+# Service-specific values for rideshare-email-service
+name: rideshare-email-service
+namespace: rideshare
+
+image:
+  repository: rideshare-email-service
+  tag: "latest"
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+replicaCount: 2
+
+# Configuration specific to email service
+config:
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  SERVICE_NAME: "rideshare-email-service"
+  # Email service typically doesn't call other services
+  # But may need SMTP or email provider settings
+
+# Secrets - these will be overridden by environment-specific values
+secrets:
+  DATABASE_URL: ""
+  REDIS_URL: ""
+  # Add email-specific secrets
+  SMTP_HOST: ""
+  SMTP_PORT: ""
+  SMTP_USER: ""
+  SMTP_PASSWORD: ""
+  # Or email provider API keys
+  SENDGRID_API_KEY: ""
+
+# Email service might not need ingress
+ingress:
+  enabled: false

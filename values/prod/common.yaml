@@ -1,0 +1,53 @@
+# Common values for all services in production environment
+namespace: rideshare-prod
+
+image:
+  tag: "v1.0.0"  # Use specific version tags in production
+  pullPolicy: IfNotPresent
+
+replicaCount: 3
+
+# Production resource limits
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "500m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+# Production configuration
+config:
+  NODE_ENV: "production"
+  LOG_LEVEL: "warn"
+
+# Secrets - MUST use Azure Key Vault, External Secrets Operator, or Sealed Secrets
+# DO NOT commit actual secrets to git
+# These are placeholders showing the structure
+secrets:
+  DATABASE_URL: "USE_EXTERNAL_SECRETS_OPERATOR"
+  REDIS_URL: "USE_EXTERNAL_SECRETS_OPERATOR"
+
+# Ingress settings for production
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  # Update hosts based on your production domain
+  tls: []
+
+# Enable autoscaling in production
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
