@@ -28,6 +28,7 @@ This repository supports a **phased migration** from Azure Container Apps to Kub
 ## 🎯 Quick Start (Dev Environment Only)
 
 ### Prerequisites
+
 - Kubernetes cluster with ArgoCD installed
 - `kubectl` configured
 - ACR credentials
@@ -39,23 +40,23 @@ This repository supports a **phased migration** from Azure Container Apps to Kub
 # Edit line 16: repoURL: https://github.com/YOUR_ORG/kubernetes-infra.git
 
 # 2. Create namespaces
-make deploy-namespaces
+kubectl apply -f argocd/namespaces.yaml
 
 # 3. Update secrets in values/dev/common.yaml (database, redis URLs)
 
 # 4. Create ACR pull secret
-ACR_USERNAME=xxx ACR_PASSWORD=xxx make create-acr-secret-dev
+kubectl create secret docker-registry acr-secret \
+  --docker-server=teleiosacr.azurecr.io \
+  --docker-username=<ACR_USERNAME> \
+  --docker-password=<ACR_PASSWORD> \
+  --namespace=rideshare-dev
 
 # 5. Deploy to dev
-make deploy-dev
+kubectl apply -f argocd/rideshare-applicationset-dev.yaml
 
 # 6. Monitor deployment
-make status-dev
-```
-
-Or use the quick start command:
-```bash
-make quick-start-dev
+kubectl get applications -n argocd | grep rideshare
+kubectl get pods -n rideshare-dev
 ```
 
 ## 📦 Repository Structure
@@ -75,41 +76,68 @@ kubernetes-infra/
 │   ├── rideshare-applicationset-staging.yaml   # Staging ApplicationSet
 │   ├── rideshare-applicationset-prod.yaml      # Prod ApplicationSet
 │   └── namespaces.yaml                         # Namespace definitions
-├── MIGRATION.md                          # Complete migration guide
-└── Makefile                             # Helper commands
+└── MIGRATION.md                          # Complete migration guide
 ```
 
 ## 🎮 Key Commands
 
 ### Testing
+
 ```bash
-make lint-chart                                    # Lint Helm chart
-make test-chart SERVICE=rideshare-rider-service   # Test template rendering
+# Lint Helm chart
+helm lint helm/rideshare-microservice
+
+# Test template rendering
+helm template rideshare-rider-service helm/rideshare-microservice \
+  -f values/rideshare-rider-service.yaml \
+  -f values/dev/common.yaml
 ```
 
 ### Deployment (Phased)
+
 ```bash
-make deploy-dev         # Phase 1: Deploy to dev
-make deploy-staging     # Phase 2: Deploy to staging (with confirmation)
-make deploy-prod        # Phase 3: Deploy to prod (requires "yes" confirmation)
+# Phase 1: Deploy to dev
+kubectl apply -f argocd/rideshare-applicationset-dev.yaml
+
+# Phase 2: Deploy to staging
+kubectl apply -f argocd/rideshare-applicationset-staging.yaml
+
+# Phase 3: Deploy to prod
+kubectl apply -f argocd/rideshare-applicationset-prod.yaml
 ```
 
 ### Monitoring
+
 ```bash
-make status-dev         # Check dev environment
-make status-staging     # Check staging environment
-make status-prod        # Check production environment
-make status             # Check all environments
+# Check dev environment
+kubectl get applications -n argocd | grep "rideshare.*-dev"
+kubectl get pods -n rideshare-dev
+
+# Check staging environment
+kubectl get applications -n argocd | grep "rideshare.*-staging"
+kubectl get pods -n rideshare-staging
+
+# Check production environment
+kubectl get applications -n argocd | grep "rideshare.*-prod"
+kubectl get pods -n rideshare-prod
+
+# Check all environments
+kubectl get applications -n argocd | grep rideshare
+kubectl get pods -n rideshare-dev -n rideshare-staging -n rideshare-prod
 ```
 
 ### Cleanup
-```bash
-make delete-dev         # Remove dev ApplicationSet
-make delete-staging     # Remove staging ApplicationSet
-make delete-prod        # Remove prod ApplicationSet (requires confirmation)
-```
 
-Run `make help` to see all available commands.
+```bash
+# Remove dev ApplicationSet
+kubectl delete -f argocd/rideshare-applicationset-dev.yaml
+
+# Remove staging ApplicationSet
+kubectl delete -f argocd/rideshare-applicationset-staging.yaml
+
+# Remove prod ApplicationSet
+kubectl delete -f argocd/rideshare-applicationset-prod.yaml
+```
 
 ## 📋 Current Services
 
@@ -119,15 +147,16 @@ Run `make help` to see all available commands.
 
 ## 🌍 Environments
 
-| Environment | Namespace | Replicas | Auto-Sync | HPA |
-|------------|-----------|----------|-----------|-----|
-| Development | `rideshare-dev` | 1 | ✅ Yes | ❌ No |
-| Staging | `rideshare-staging` | 2 | ✅ Yes | ✅ Yes |
-| Production | `rideshare-prod` | 3+ | ⚠️ Manual | ✅ Yes |
+| Environment | Namespace           | Replicas | Auto-Sync | HPA    |
+| ----------- | ------------------- | -------- | --------- | ------ |
+| Development | `rideshare-dev`     | 1        | ✅ Yes    | ❌ No  |
+| Staging     | `rideshare-staging` | 2        | ✅ Yes    | ✅ Yes |
+| Production  | `rideshare-prod`    | 3+       | ⚠️ Manual | ✅ Yes |
 
 ## ➕ Adding New Services
 
 1. Copy a service values file:
+
    ```bash
    cp values/rideshare-rider-service.yaml values/rideshare-payment-service.yaml
    ```
@@ -135,6 +164,7 @@ Run `make help` to see all available commands.
 2. Update the values in the new file
 
 3. Add to ApplicationSet(s) in `argocd/rideshare-applicationset-dev.yaml`:
+
    ```yaml
    - service: rideshare-payment-service
    ```

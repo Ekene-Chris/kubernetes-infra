@@ -59,22 +59,20 @@ kubectl create secret docker-registry acr-secret \
   --namespace=rideshare-dev
 ```
 
-Or use the Makefile:
-```bash
-ACR_USERNAME=xxx ACR_PASSWORD=xxx make create-acr-secret-dev
-```
-
 ### Step 4: Test Helm Charts Locally (Optional but Recommended)
 
 ```bash
 # Test rendering for each service
-make test-chart SERVICE=rideshare-rider-service
-make test-chart SERVICE=rideshare-driver-service
-make test-chart SERVICE=rideshare-email-service
-
-# Or test all at once
-helm template test helm/rideshare-microservice \
+helm template rideshare-rider-service helm/rideshare-microservice \
   -f values/rideshare-rider-service.yaml \
+  -f values/dev/common.yaml
+
+helm template rideshare-driver-service helm/rideshare-microservice \
+  -f values/rideshare-driver-service.yaml \
+  -f values/dev/common.yaml
+
+helm template rideshare-email-service helm/rideshare-microservice \
+  -f values/rideshare-email-service.yaml \
   -f values/dev/common.yaml
 ```
 
@@ -219,18 +217,23 @@ kubectl create secret docker-registry acr-secret \
   --docker-username=<ACR_USERNAME> \
   --docker-password=<ACR_PASSWORD> \
   --namespace=rideshare-staging
-
-# Or use Makefile
-ACR_USERNAME=xxx ACR_PASSWORD=xxx make create-acr-secret-staging
 ```
 
 ### Step 3: Test Staging Configuration
 
 ```bash
 # Test helm rendering for staging
-make test-chart-staging SERVICE=rideshare-rider-service
-make test-chart-staging SERVICE=rideshare-driver-service
-make test-chart-staging SERVICE=rideshare-email-service
+helm template rideshare-rider-service helm/rideshare-microservice \
+  -f values/rideshare-rider-service.yaml \
+  -f values/staging/common.yaml
+
+helm template rideshare-driver-service helm/rideshare-microservice \
+  -f values/rideshare-driver-service.yaml \
+  -f values/staging/common.yaml
+
+helm template rideshare-email-service helm/rideshare-microservice \
+  -f values/rideshare-email-service.yaml \
+  -f values/staging/common.yaml
 ```
 
 ### Step 4: Deploy to Staging

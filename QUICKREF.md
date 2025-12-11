@@ -6,14 +6,19 @@
 
 ```bash
 # 1. Setup
-make deploy-namespaces
-ACR_USERNAME=xxx ACR_PASSWORD=xxx make create-acr-secret-dev
+kubectl apply -f argocd/namespaces.yaml
+kubectl create secret docker-registry acr-secret \
+  --docker-server=teleiosacr.azurecr.io \
+  --docker-username=<ACR_USERNAME> \
+  --docker-password=<ACR_PASSWORD> \
+  --namespace=rideshare-dev
 
 # 2. Deploy
-make deploy-dev
+kubectl apply -f argocd/rideshare-applicationset-dev.yaml
 
 # 3. Monitor
-make status-dev
+kubectl get applications -n argocd | grep "rideshare.*-dev"
+kubectl get pods -n rideshare-dev
 kubectl get pods -n rideshare-dev -w
 
 # 4. Check logs
@@ -30,13 +35,18 @@ curl http://localhost:8080/health
 # After dev is validated...
 
 # 1. Setup
-ACR_USERNAME=xxx ACR_PASSWORD=xxx make create-acr-secret-staging
+kubectl create secret docker-registry acr-secret \
+  --docker-server=teleiosacr.azurecr.io \
+  --docker-username=<ACR_USERNAME> \
+  --docker-password=<ACR_PASSWORD> \
+  --namespace=rideshare-staging
 
-# 2. Deploy (with confirmation)
-make deploy-staging
+# 2. Deploy
+kubectl apply -f argocd/rideshare-applicationset-staging.yaml
 
 # 3. Monitor
-make status-staging
+kubectl get applications -n argocd | grep "rideshare.*-staging"
+kubectl get pods -n rideshare-staging
 ```
 
 ### Phase 3: Production
@@ -45,10 +55,14 @@ make status-staging
 # After staging is validated and approved...
 
 # 1. Setup
-ACR_USERNAME=xxx ACR_PASSWORD=xxx make create-acr-secret-prod
+kubectl create secret docker-registry acr-secret \
+  --docker-server=teleiosacr.azurecr.io \
+  --docker-username=<ACR_USERNAME> \
+  --docker-password=<ACR_PASSWORD> \
+  --namespace=rideshare-prod
 
-# 2. Deploy (requires "yes" confirmation)
-make deploy-prod
+# 2. Deploy
+kubectl apply -f argocd/rideshare-applicationset-prod.yaml
 
 # 3. Manual sync each service
 argocd app sync rideshare-rider-service-prod
@@ -56,17 +70,29 @@ argocd app sync rideshare-driver-service-prod
 argocd app sync rideshare-email-service-prod
 
 # 4. Monitor
-make status-prod
+kubectl get applications -n argocd | grep "rideshare.*-prod"
+kubectl get pods -n rideshare-prod
 ```
 
 ## Common Operations
 
 ### Check Status
 ```bash
-make status              # All environments
-make status-dev          # Dev only
-make status-staging      # Staging only
-make status-prod         # Production only
+# All environments
+kubectl get applications -n argocd | grep rideshare
+kubectl get pods -n rideshare-dev -n rideshare-staging -n rideshare-prod
+
+# Dev only
+kubectl get applications -n argocd | grep "rideshare.*-dev"
+kubectl get pods -n rideshare-dev
+
+# Staging only
+kubectl get applications -n argocd | grep "rideshare.*-staging"
+kubectl get pods -n rideshare-staging
+
+# Production only
+kubectl get applications -n argocd | grep "rideshare.*-prod"
+kubectl get pods -n rideshare-prod
 ```
 
 ### View Logs
@@ -93,13 +119,23 @@ kubectl describe application rideshare-rider-service-dev -n argocd
 
 ### Test Configuration
 ```bash
-# Test helm template rendering
-make test-chart SERVICE=rideshare-rider-service
-make test-chart-staging SERVICE=rideshare-driver-service
-make test-chart-prod SERVICE=rideshare-email-service
+# Test helm template rendering for dev
+helm template rideshare-rider-service helm/rideshare-microservice \
+  -f values/rideshare-rider-service.yaml \
+  -f values/dev/common.yaml
+
+# Test helm template rendering for staging
+helm template rideshare-driver-service helm/rideshare-microservice \
+  -f values/rideshare-driver-service.yaml \
+  -f values/staging/common.yaml
+
+# Test helm template rendering for prod
+helm template rideshare-email-service helm/rideshare-microservice \
+  -f values/rideshare-email-service.yaml \
+  -f values/prod/common.yaml
 
 # Lint chart
-make lint-chart
+helm lint helm/rideshare-microservice
 ```
 
 ### Sync Applications
@@ -111,7 +147,7 @@ argocd app sync rideshare-rider-service-dev
 argocd app sync rideshare-rider-service-dev --force
 
 # Sync all (careful!)
-make sync-all
+kubectl get applications -n argocd -o name | grep rideshare | xargs -I {} kubectl patch {} -n argocd --type merge -p '{"operation":{"sync":{}}}'
 ```
 
 ### Rollback
@@ -164,7 +200,12 @@ kubectl exec -n rideshare-dev deployment/rideshare-rider-service -- \
 kubectl get secret acr-secret -n rideshare-dev
 
 # Recreate secret
-ACR_USERNAME=xxx ACR_PASSWORD=xxx make create-acr-secret-dev
+kubectl create secret docker-registry acr-secret \
+  --docker-server=teleiosacr.azurecr.io \
+  --docker-username=<ACR_USERNAME> \
+  --docker-password=<ACR_PASSWORD> \
+  --namespace=rideshare-dev \
+  --dry-run=client -o yaml | kubectl apply -f -
 
 # Check image name in values file
 cat values/rideshare-rider-service.yaml | grep repository
@@ -292,19 +333,20 @@ git push
 
 # ArgoCD will detect changes and sync automatically (if auto-sync enabled)
 # Check sync status
-make status-dev
+kubectl get applications -n argocd | grep "rideshare.*-dev"
+kubectl get pods -n rideshare-dev
 ```
 
 ## Emergency Procedures
 
 ### Stop All Deployments in Dev
 ```bash
-make delete-dev
+kubectl delete -f argocd/rideshare-applicationset-dev.yaml
 ```
 
 ### Stop All Deployments in Staging
 ```bash
-make delete-staging
+kubectl delete -f argocd/rideshare-applicationset-staging.yaml
 ```
 
 ### Emergency Production Rollback
@@ -316,7 +358,7 @@ kubectl rollout undo deployment/rideshare-rider-service -n rideshare-prod
 kubectl scale deployment rideshare-rider-service -n rideshare-prod --replicas=0
 
 # Option 3: Delete ApplicationSet
-make delete-prod
+kubectl delete -f argocd/rideshare-applicationset-prod.yaml
 ```
 
 ## Useful Aliases
