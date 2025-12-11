@@ -277,3 +277,4 @@ quick-start-dev:
 	@echo "5. Monitor: make status-dev"
 	@echo ""
 	@echo "See MIGRATION.md for detailed instructions"
+	@echo "====================================="
