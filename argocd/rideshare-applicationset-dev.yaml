@@ -27,7 +27,7 @@ spec:
 
       source:
         repoURL: https://github.com/Ekene-Chris/kubernetes-infra.git # Update with your repo URL
-        targetRevision: main
+        targetRevision: feature/argocd
         path: helm/rideshare-microservice
         helm:
           valueFiles:
