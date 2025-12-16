@@ -11,21 +11,22 @@ spec:
           - service: rideshare-rider-service
           - service: rideshare-driver-service
           - service: rideshare-email-service
+          - service: rideshare-trip-service
+          - service: rideshare-matching-service
+          - service: rideshare-frontend
           # Add more services here as needed
-          # - service: rideshare-payment-service
-          # - service: rideshare-notification-service
 
   template:
     metadata:
-      name: '{{service}}-dev'
+      name: "{{service}}-dev"
       labels:
-        service: '{{service}}'
+        service: "{{service}}"
         environment: dev
     spec:
       project: default
 
       source:
-        repoURL: https://github.com/YOUR_ORG/kubernetes-infra.git  # Update with your repo URL
+        repoURL: https://github.com/Ekene-Chris/kubernetes-infra.git # Update with your repo URL
         targetRevision: main
         path: helm/rideshare-microservice
         helm:

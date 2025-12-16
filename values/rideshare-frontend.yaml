@@ -1,0 +1,47 @@
+# Service-specific values for rideshare-frontend
+name: rideshare-frontend
+namespace: rideshare
+
+image:
+  repository: rideshare-frontend
+  tag: "latest"
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+replicaCount: 2
+
+# Configuration specific to frontend
+config:
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  # API endpoints for frontend to call
+  RIDER_API_URL: "http://rideshare-rider-service.rideshare.svc.cluster.local"
+  DRIVER_API_URL: "http://rideshare-driver-service.rideshare.svc.cluster.local"
+  # Frontend-specific config
+  PUBLIC_URL: "https://rideshare.example.com"
+
+# Frontend typically doesn't need database secrets
+# But might need API keys for third-party services
+secrets: {}
+
+# Frontend SHOULD have ingress enabled - it needs to be publicly accessible
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: rideshare.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: rideshare-frontend-tls
+      hosts:
+        - rideshare.example.com

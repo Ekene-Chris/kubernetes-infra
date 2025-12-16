@@ -1,0 +1,49 @@
+# Service-specific values for rideshare-matching-service
+name: rideshare-matching-service
+namespace: rideshare
+
+image:
+  repository: rideshare-matching-service
+  tag: "latest"
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+replicaCount: 2
+
+# Configuration specific to matching service
+config:
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  SERVICE_NAME: "rideshare-matching-service"
+  # Inter-service communication
+  RIDER_SERVICE_URL: "http://rideshare-rider-service.rideshare.svc.cluster.local"
+  DRIVER_SERVICE_URL: "http://rideshare-driver-service.rideshare.svc.cluster.local"
+  # Matching algorithm parameters
+  MAX_MATCHING_DISTANCE_KM: "5"
+  MATCHING_TIMEOUT_SECONDS: "30"
+
+# Secrets - these will be overridden by environment-specific values
+secrets:
+  DATABASE_URL: ""
+  REDIS_URL: ""
+
+# Ingress - can be enabled per environment
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: matching-api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: matching-api-tls
+      hosts:
+        - matching-api.example.com
